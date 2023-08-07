@@ -1,26 +1,29 @@
 name: CI/CD
 
-# Controls when the workflow will run
 on:
-  # Activates the workflow; then there is a push to the main branch
   push:
     branches: [develop]
 
   # allows you to manually execute this pipeline from the Actions tab.
   workflow_dispatch:
 
-# A workflow run consists of one or more jobs that can be executed either sequentially or concurrently.
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     #
     steps:
-      - uses: actions/checkout@v2  
-      - uses: actions/setup-python@v2  
-      - run: pip install -r requirements.txt  # install requirements to enable GitHub run tests
+      - name: Create the .ssh directory
+        run: mkdir ~/.ssh && chmod 700 ~/.ssh
+      - name: Install private key
+        run: echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+      - name: Add host to known hosts
+        run: echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Launch deploy script on droplet
+        run: ssh root@${{ secrets.QA_HOST }} "/bin/bash -c 'cd scales-satyrn && sh docker_scripts/refresh_api.sh && docker system prune --filter until=24h --all --force && docker builder prune --all --force'"
+      # - uses: actions/checkout@v2  
+      # - uses: actions/setup-python@v2  
+      # - run: pip install -r requirements.txt  # install requirements to enable GitHub run tests
 
       # - name: Install doctl
       #   uses: digitalocean/action-doctl@v2
